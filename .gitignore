@@ -1,9 +1,30 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
 .next/
-.vercel/
+out/
+
+# Vite build output
 dist/
+
+# Vercel
+.vercel/
+
+# Misc
 build/
 *.log
 .DS_Store
+Thumbs.db
+
+# Env files — keep .env (for Replit), ignore local overrides
 .env.local
-.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
