@@ -1,98 +1,124 @@
-import { useEffect, useState } from 'react'
-import PageWrapper from '@/components/PageWrapper'
 import { Link } from 'react-router-dom'
-import { Bug, Zap, CheckCircle, Clock, TrendingUp, ArrowRight, AlertTriangle, Upload, BarChart3 } from 'lucide-react'
+import { kpis, audit, issues, records, analyticsWeekly } from '@/lib/mock-data'
+import { Sparkles, ArrowRight, TrendingUp, CheckCircle2, Upload, Zap, AlertTriangle, Database, Users, BarChart3 } from 'lucide-react'
 
-const C = { '#ff2d78':true, '#ffe600':true, '#00ff94':true, '#00f5ff':true }
-const SEV: Record<string,string> = { critical:'#ef4444', high:'#f97316', medium:'#ffe600', low:'#00f5ff' }
-const STATUS: Record<string,string> = { open:'#ff2d78', in_progress:'#ffe600', resolved:'#00ff94', closed:'#475569' }
-const BARS = [35,60,42,78,55,88,44,70,92,65,50,85]
-const MAX = Math.max(...BARS)
-
-const mock = {
-  totalIssues:248, openIssues:142, criticalIssues:8, resolvedToday:34,
-  recentIssues:[
-    {id:'ISS-042',title:'Login button unresponsive on Safari',severity:'critical',status:'open',assignee:'SC'},
-    {id:'ISS-041',title:'Memory leak in analytics worker',severity:'high',status:'in_progress',assignee:'MR'},
-    {id:'ISS-040',title:'CSV upload silently drops last row',severity:'medium',status:'open',assignee:'DK'},
-    {id:'ISS-039',title:'Audit timestamps in wrong timezone',severity:'low',status:'resolved',assignee:'PS'},
-    {id:'ISS-038',title:'n8n webhook 403 on second trigger',severity:'high',status:'open',assignee:'LB'},
-  ]
-}
+const maxFixed = Math.max(...analyticsWeekly.map(d => d.fixed))
+const SEV: Record<string,string> = { high:'#ef4444', medium:'#ffe600', low:'#00f5ff', fixed:'#00ff94' }
 
 export default function Dashboard() {
-  const [data] = useState(mock)
+  const topIssues = issues.slice(0, 5)
+  const pending = issues.filter(i => i.status === 'pending').length
+
   return (
-    <PageWrapper title="Dashboard" subtitle="Live overview of your issues and team activity">
-      {/* KPIs */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16, marginBottom:24 }}>
+    <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', flexDirection:'column', gap:24 }}>
+
+      {/* Hero */}
+      <div style={{ position:'relative', overflow:'hidden', borderRadius:24, background:'linear-gradient(135deg,#9d00ff 0%,#ff2d78 50%,#ffe600 100%)', padding:'36px 40px', color:'white' }}>
+        <div style={{ position:'absolute', right:-40, top:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,45,120,0.4)', filter:'blur(40px)' }}/>
+        <div style={{ position:'absolute', right:80, bottom:-60, width:180, height:180, borderRadius:'50%', background:'rgba(255,230,0,0.35)', filter:'blur(40px)' }}/>
+        <div style={{ position:'absolute', top:20, right:32 }}>
+          <div style={{ padding:'12px 18px', borderRadius:16, background:'rgba(255,255,255,0.15)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.3)', transform:'rotate(2deg)' }}>
+            <p style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', opacity:0.8, margin:0 }}>Clean score</p>
+            <p style={{ fontSize:34, fontWeight:800, fontFamily:'monospace', lineHeight:1, margin:'4px 0 0' }}>{kpis.cleanScore}<span style={{ fontSize:16 }}>%</span></p>
+          </div>
+        </div>
+        <div style={{ position:'relative' }}>
+          <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'4px 12px', borderRadius:999, background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.35)', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>
+            <Sparkles size={12}/>AI scan complete · 2m ago
+          </span>
+          <h2 style={{ fontSize:40, fontWeight:800, margin:'0 0 10px', lineHeight:1.05 }}>Your data is<br/><span style={{ textDecoration:'underline', textDecorationStyle:'wavy', textDecorationColor:'rgba(255,255,255,0.5)' }}>spotless-ish</span> ✨</h2>
+          <p style={{ fontSize:15, opacity:0.88, margin:'0 0 20px', maxWidth:480 }}>{pending} issues need your review. {kpis.fixedToday} fixed today. AI confidence: 94%.</p>
+          <div style={{ display:'flex', gap:10 }}>
+            <Link to="/fixes" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:12, background:'white', color:'#1e0035', fontWeight:700, fontSize:13, textDecoration:'none' }}>
+              <Zap size={15}/>Review fixes<ArrowRight size={14}/>
+            </Link>
+            <Link to="/upload" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:12, background:'rgba(255,255,255,0.2)', backdropFilter:'blur(8px)', color:'white', fontWeight:600, fontSize:13, textDecoration:'none', border:'1px solid rgba(255,255,255,0.3)' }}>
+              <Upload size={15}/>Upload CSV
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI tiles */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))', gap:14 }}>
         {[
-          {icon:Bug,          label:'Total Issues',    value:data.totalIssues, delta:'+12',  color:'#ff2d78'},
-          {icon:AlertTriangle,label:'Open',            value:data.openIssues,  delta:'+5',   color:'#ffe600'},
-          {icon:Zap,          label:'Critical',        value:data.criticalIssues,delta:'-3', color:'#ef4444'},
-          {icon:CheckCircle,  label:'Resolved today',  value:data.resolvedToday, delta:'+28%',color:'#00ff94'},
-        ].map(({icon:Icon,label,value,delta,color}) => (
-          <div key={label} style={{ padding:20, borderRadius:14, background:`${color}08`, border:`1px solid ${color}22` }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-              <div style={{ width:38, height:38, borderRadius:10, background:`${color}18`, border:`1px solid ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Icon size={17} color={color}/>
-              </div>
-              <span style={{ fontSize:11, padding:'3px 8px', borderRadius:999, background:delta.startsWith('-')?'rgba(239,68,68,0.12)':'rgba(0,255,148,0.1)', color:delta.startsWith('-')?'#ef4444':'#00ff94', fontWeight:600 }}>{delta}</span>
+          { icon:Database,     label:'Total records',  value:kpis.totalRecords.toLocaleString(), color:'#00f5ff' },
+          { icon:AlertTriangle,label:'Issues found',   value:kpis.issuesFound,                   color:'#ff2d78' },
+          { icon:CheckCircle2, label:'Fixed today',    value:kpis.fixedToday,                    color:'#00ff94' },
+          { icon:Users,        label:'Duplicates',     value:kpis.duplicates,                    color:'#9d00ff' },
+          { icon:BarChart3,    label:'Missing fields', value:kpis.missingValues,                 color:'#ffe600' },
+        ].map(({ icon:Icon, label, value, color }) => (
+          <div key={label} style={{ padding:20, borderRadius:14, background:`${color}0a`, border:`1px solid ${color}22` }}>
+            <div style={{ width:36, height:36, borderRadius:9, background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12 }}>
+              <Icon size={16} color={color}/>
             </div>
-            <div style={{ fontSize:28, fontWeight:800, color:'white', fontFamily:'"Syne",monospace', lineHeight:1 }}>{value}</div>
-            <div style={{ fontSize:12, color:'#475569', marginTop:4 }}>{label}</div>
+            <p style={{ fontSize:26, fontWeight:800, color:'white', fontFamily:'monospace', margin:'0 0 4px', lineHeight:1 }}>{value}</p>
+            <p style={{ fontSize:11, color:'#475569', margin:0, textTransform:'uppercase', letterSpacing:'0.5px', fontWeight:600 }}>{label}</p>
           </div>
         ))}
       </div>
 
-      {/* Chart + Issues */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:16, marginBottom:24 }}>
-        {/* Trend chart */}
-        <div style={{ padding:20, borderRadius:14, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+      {/* Chart + Recent issues */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:16 }}>
+        {/* Weekly bar chart */}
+        <div style={{ padding:24, borderRadius:16, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
             <div>
-              <h3 style={{ fontSize:14, fontWeight:700, color:'white', margin:0 }}>Issue trend</h3>
-              <p style={{ fontSize:11, color:'#475569', margin:0 }}>Last 12 days</p>
+              <h3 style={{ fontSize:14, fontWeight:700, color:'white', margin:'0 0 3px' }}>Weekly activity</h3>
+              <p style={{ fontSize:11, color:'#475569', margin:0 }}>Issues fixed per day</p>
             </div>
-            <span style={{ fontSize:11, padding:'3px 8px', borderRadius:999, background:'rgba(0,255,148,0.1)', color:'#00ff94', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
-              <TrendingUp size={11}/>–8%
+            <span style={{ fontSize:11, padding:'3px 9px', borderRadius:999, background:'rgba(0,255,148,0.1)', color:'#00ff94', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
+              <TrendingUp size={10}/>+18%
             </span>
           </div>
-          <div style={{ display:'flex', alignItems:'flex-end', gap:4, height:80 }}>
-            {BARS.map((h,i) => (
-              <div key={i} style={{ flex:1, borderRadius:'3px 3px 0 0', background:i===11?'#9d00ff':'rgba(157,0,255,0.25)', height:`${(h/MAX)*100}%`, transition:'height 0.3s' }}/>
+          <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:90 }}>
+            {analyticsWeekly.map((d, i) => (
+              <div key={d.day} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <div style={{ width:'100%', borderRadius:'4px 4px 0 0', background:i===6?'#9d00ff':'rgba(157,0,255,0.3)', height:`${(d.fixed/maxFixed)*100}%`, minHeight:6, transition:'height 0.3s' }}/>
+                <span style={{ fontSize:9, color:'#475569', fontWeight:600 }}>{d.day}</span>
+              </div>
             ))}
           </div>
         </div>
 
         {/* Recent issues */}
-        <div style={{ padding:20, borderRadius:14, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-            <h3 style={{ fontSize:14, fontWeight:700, color:'white', margin:0 }}>Recent issues</h3>
-            <Link to="/issues" style={{ fontSize:12, color:'#9d00ff', textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>View all <ArrowRight size={12}/></Link>
+        <div style={{ padding:24, borderRadius:16, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <h3 style={{ fontSize:14, fontWeight:700, color:'white', margin:0 }}>Top issues</h3>
+            <Link to="/issues" style={{ fontSize:12, color:'#9d00ff', textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>All issues<ArrowRight size={12}/></Link>
           </div>
-          {data.recentIssues.map(issue => (
-            <div key={issue.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+          {topIssues.map(issue => (
+            <div key={issue.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
               <span style={{ fontSize:10, padding:'2px 7px', borderRadius:999, background:`${SEV[issue.severity]}18`, color:SEV[issue.severity], border:`1px solid ${SEV[issue.severity]}30`, fontWeight:700, flexShrink:0 }}>{issue.severity}</span>
-              <span style={{ fontSize:13, color:'#cbd5e1', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{issue.title}</span>
-              <span style={{ fontSize:10, padding:'2px 7px', borderRadius:999, background:`${STATUS[issue.status]}15`, color:STATUS[issue.status], flexShrink:0 }}>{issue.status}</span>
+              <span style={{ fontSize:13, color:'#cbd5e1', flex:1 }}>{issue.suggestion}</span>
+              <span style={{ fontSize:11, color:'#9d00ff', fontFamily:'monospace', flexShrink:0 }}>{issue.recordId}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
-        {[
-          {to:'/issues/new',icon:Bug,  label:'New issue',      color:'#ff2d78'},
-          {to:'/upload',    icon:Upload,label:'Upload CSV',    color:'#00f5ff'},
-          {to:'/analytics', icon:BarChart3,label:'View analytics',color:'#9d00ff'},
-        ].map(({to,icon:Icon,label,color}) => (
-          <Link key={to} to={to} style={{ display:'flex', alignItems:'center', gap:12, padding:16, borderRadius:12, background:`${color}08`, border:`1px solid ${color}22`, textDecoration:'none', transition:'all 0.2s' }}>
-            <Icon size={17} color={color}/><span style={{ fontSize:14, fontWeight:600, color:'#cbd5e1' }}>{label}</span><ArrowRight size={13} color="#334155" style={{ marginLeft:'auto' }}/>
-          </Link>
-        ))}
+      {/* Recent audit */}
+      <div style={{ padding:24, borderRadius:16, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+          <h3 style={{ fontSize:14, fontWeight:700, color:'white', margin:0 }}>Recent activity</h3>
+          <Link to="/audit" style={{ fontSize:12, color:'#9d00ff', textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>Full log<ArrowRight size={12}/></Link>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+          {audit.slice(0,4).map((entry, i) => (
+            <div key={entry.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom: i<3 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:entry.user==='AI Auto'?'linear-gradient(135deg,#9d00ff,#ff2d78)':'rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'white', flexShrink:0 }}>
+                {entry.user==='AI Auto'?<Sparkles size={13}/>:entry.user.slice(0,2)}
+              </div>
+              <div style={{ flex:1 }}>
+                <span style={{ fontSize:13, color:'#cbd5e1', fontWeight:500 }}>{entry.user} </span>
+                <span style={{ fontSize:13, color:'#64748b' }}>{entry.action} · </span>
+                <span style={{ fontSize:13, color:'#475569' }}>{entry.target}</span>
+              </div>
+              <span style={{ fontSize:11, color:'#334155', fontFamily:'monospace', flexShrink:0 }}>{entry.time.split(' ')[1]}</span>
+            </div>
+          ))}
+        </div>
       </div>
-    </PageWrapper>
+    </div>
   )
 }
