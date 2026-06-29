@@ -1,40 +1,60 @@
-# IssueVault 🐛⚡
+# IssueVault 🛡️
 
-> Professional Issue Tracking System — Built with Next.js 14 + Supabase + Tailwind CSS
+> Track. Fix. Ship.
 
-## Features
-- 🔥 **Dashboard** — Live charts, stats, and activity feed from Supabase
-- 🐛 **Issues** — Create, edit, delete issues with type/severity/status filters
-- ⚡ **Actions** — Approve, reject, fix, reopen, comment on issues
-- 📤 **CSV Upload** — Drag-drop CSV import with preview, progress, and history
-- 📋 **Records** — Paginated view of all uploaded data records
-- 🔍 **Audit Log** — Complete activity log with before/after diff view
+The modern issue tracker for engineering teams. Built with Next.js + Supabase.
 
-## Setup
+## Stack
 
-### 1. Run SQL in Supabase
-Go to: https://supabase.com/dashboard/project/keyeemsymgfwrzbqfwxk/sql
+- **Frontend**: Next.js 14 (App Router) + Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **Integrations**: GitHub, Jira, Linear, Slack, n8n
+- **Marketing site**: Vite + TanStack Router (in `/website`)
 
-Run the SQL from `/app/setup` in the running app.
+## Structure
 
-### 2. Environment Variables
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://keyeemsymgfwrzbqfwxk.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+```
+issuevault/
+├── app/                   # Next.js App Router pages
+│   ├── page.tsx           # Dashboard
+│   ├── issues/            # Issues tracker
+│   ├── actions/           # Automated workflows
+│   ├── analytics/         # Charts & insights
+│   ├── team/              # Team management
+│   ├── integrations/      # GitHub, Jira, Slack, n8n
+│   ├── audit/             # Audit log
+│   ├── upload/            # CSV uploader
+│   ├── records/           # Data records
+│   ├── notifications/     # Alerts
+│   ├── settings/          # App settings
+│   └── api/               # API routes (all backed by Supabase)
+├── components/            # Shared React components
+├── lib/
+│   └── supabase.ts        # Supabase client (anon + admin)
+├── src/                   # Vite SPA version (Replit compat)
+│   ├── App.tsx
+│   ├── pages/             # All app pages
+│   └── components/        # Sidebar + header
+├── website/               # Marketing site (Lovable/Vite/TanStack)
+│   └── src/routes/        # landing, pricing, login, signup, about, blog, docs
+├── supabase/migrations/   # DB schema migrations
+└── .env                   # Supabase keys (pre-configured)
 ```
 
-### 3. Run locally
+## Quick Start (Replit)
+
 ```bash
 npm install
 npm run dev
 ```
 
-### 4. Deploy to Vercel
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/shouryak3103-del/issuevault)
+## Environment Variables
 
-## Tech Stack
-- **Frontend**: Next.js 14 App Router, React 18, Tailwind CSS
-- **Database**: Supabase (PostgreSQL)
-- **Charts**: Recharts
-- **Icons**: Lucide React
+Already set in `.env`. To override:
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/service key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |

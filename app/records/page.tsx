@@ -2,83 +2,83 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import PageWrapper from '@/components/PageWrapper'
-import { Database, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { Database, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 
 function RecordsContent() {
   const searchParams = useSearchParams()
-  const [records, setRecords] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
-  const [uploads, setUploads] = useState<any[]>([])
+  const [records,      setRecords]      = useState<any[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [page,         setPage]         = useState(1)
+  const [totalPages,   setTotalPages]   = useState(1)
+  const [total,        setTotal]        = useState(0)
+  const [uploads,      setUploads]      = useState<any[]>([])
   const [selectedUpload, setSelectedUpload] = useState(searchParams.get('upload_id') || 'all')
-  const [columns, setColumns] = useState<string[]>([])
+  const [columns,      setColumns]      = useState<string[]>([])
 
   const load = async (p = 1) => {
     setLoading(true)
-    const params = new URLSearchParams({ page: String(p) })
+    const params = new URLSearchParams({ page:String(p), limit:'20' })
     if (selectedUpload !== 'all') params.set('upload_id', selectedUpload)
     const r = await fetch('/api/records?' + params)
     const d = await r.json()
-    const recs = d.data || []
-    setRecords(recs)
-    setPage(p)
-    setTotalPages(d.totalPages || 1)
-    setTotal(d.count || 0)
-    if (recs.length > 0) setColumns(Object.keys(recs[0].data || {}).slice(0, 10))
+    setRecords(d.data || [])
+    setTotalPages(d.total_pages || 1)
+    setTotal(d.total || 0)
+    if (d.data?.length > 0) {
+      const cols = Object.keys(d.data[0]).filter(c => !['id','created_at','upload_id','created_date','updated_date','created_by'].includes(c))
+      setColumns(cols.slice(0, 8))
+    }
     setLoading(false)
   }
 
-  useEffect(() => {
-    fetch('/api/uploads').then(r=>r.json()).then(d=>setUploads(d.data||[]))
-  }, [])
-  useEffect(() => { load(1) }, [selectedUpload])
+  const loadUploads = async () => {
+    const r = await fetch('/api/uploads'); const d = await r.json()
+    setUploads(d.data || [])
+  }
+
+  useEffect(() => { loadUploads() }, [])
+  useEffect(() => { setPage(1); load(1) }, [selectedUpload])
+  useEffect(() => { load(page) }, [page])
 
   return (
-    <PageWrapper title="Records" subtitle={`${total} total records stored from CSV uploads`}>
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <select className="input-dark w-64" value={selectedUpload} onChange={e=>setSelectedUpload(e.target.value)}>
-          <option value="all">All Uploads</option>
-          {uploads.map((u:any)=>(
-            <option key={u.id} value={u.id}>{u.filename} ({u.row_count} rows)</option>
-          ))}
-        </select>
-        <button onClick={()=>load(page)} className="btn-secondary flex items-center gap-1"><RefreshCw size={13}/>Refresh</button>
-        <span className="text-slate-500 text-sm ml-auto">Page {page} of {totalPages} · {total} records</span>
+    <PageWrapper title="Records" subtitle={`${total} record${total!==1?'s':''} imported`}>
+      <div style={{ display:'flex', gap:'10px', alignItems:'center', marginBottom:'20px', flexWrap:'wrap' }}>
+        <div style={{ position:'relative' }}>
+          <select className="input-dark" style={{ minWidth:'220px' }} value={selectedUpload} onChange={e=>{setSelectedUpload(e.target.value);setPage(1)}}>
+            <option value="all">All Uploads</option>
+            {uploads.map((u:any) => <option key={u.id} value={u.id}>{u.filename} ({u.row_count} rows)</option>)}
+          </select>
+        </div>
+        <span style={{ fontSize:'12px', color:'#475569', marginLeft:'auto' }}>
+          Page {page} of {totalPages} &nbsp;·&nbsp; {total} total
+        </span>
       </div>
 
-      <div className="card overflow-hidden p-0">
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
         {loading ? (
-          <div className="p-10 text-center text-neon-purple animate-pulse font-mono">Loading records...</div>
+          <div style={{ padding:'48px', textAlign:'center', color:'#475569' }}>Loading records…</div>
         ) : records.length === 0 ? (
-          <div className="p-10 text-center">
-            <Database size={40} className="mx-auto mb-3 text-slate-600"/>
-            <p className="text-slate-400 mb-4">No records yet. Upload a CSV to get started.</p>
-            <a href="/upload" className="btn-primary inline-block text-sm">Upload CSV</a>
+          <div style={{ padding:'64px', textAlign:'center' }}>
+            <Database size={32} color="#1e293b" style={{ margin:'0 auto 12px', display:'block' }}/>
+            <p style={{ color:'#475569', fontWeight:600 }}>No records found</p>
+            <p style={{ fontSize:'13px', color:'#334155' }}>Upload a CSV file to see records here</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table-dark">
+          <div style={{ overflowX:'auto' }}>
+            <table className="table-dark" style={{ width:'100%' }}>
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Upload</th>
-                  {columns.map(c=><th key={c}>{c}</th>)}
-                  <th>Ingested At</th>
+                  {columns.map(c => <th key={c} style={{ whiteSpace:'nowrap' }}>{c.toUpperCase()}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {records.map((rec:any, i:number)=>(
-                  <tr key={rec.id}>
-                    <td className="text-slate-600 font-mono text-xs">{(page-1)*50+i+1}</td>
-                    <td className="text-xs text-slate-500 max-w-[120px] truncate">{rec.upload?.filename||'—'}</td>
-                    {columns.map(c=>(
-                      <td key={c} className="max-w-[140px]">
-                        <span className="truncate block">{String(rec.data?.[c]??'—')}</span>
+                {records.map((row: any, i: number) => (
+                  <tr key={row.id||i}>
+                    {columns.map(c => (
+                      <td key={c} style={{ maxWidth:'180px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {String(row[c]??'').slice(0,80)||<span style={{color:'#1e293b'}}>—</span>}
                       </td>
                     ))}
-                    <td className="text-xs text-slate-500">{new Date(rec.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -88,20 +88,16 @@ function RecordsContent() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 mt-4">
-          <button onClick={()=>load(Math.max(1,page-1))} disabled={page===1} className="btn-secondary flex items-center gap-1 disabled:opacity-40">
-            <ChevronLeft size={14}/>Prev
-          </button>
-          <span className="text-slate-400 text-sm">{page} / {totalPages}</span>
-          <button onClick={()=>load(Math.min(totalPages,page+1))} disabled={page===totalPages} className="btn-secondary flex items-center gap-1 disabled:opacity-40">
-            Next<ChevronRight size={14}/>
-          </button>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', marginTop:'16px' }}>
+          <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="btn-secondary" style={{ padding:'7px 12px', fontSize:'12px' }}><ChevronLeft size={14}/></button>
+          <span style={{ fontSize:'13px', color:'#64748b' }}>Page {page} of {totalPages}</span>
+          <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages} className="btn-secondary" style={{ padding:'7px 12px', fontSize:'12px' }}><ChevronRight size={14}/></button>
         </div>
       )}
     </PageWrapper>
   )
 }
 
-export default function RecordsPage() {
-  return <Suspense fallback={<div className="p-8 text-slate-400">Loading...</div>}><RecordsContent/></Suspense>
+export default function Records() {
+  return <Suspense fallback={<PageWrapper title="Records" subtitle="Loading..."><div style={{padding:'48px',textAlign:'center',color:'#475569'}}>Loading…</div></PageWrapper>}><RecordsContent/></Suspense>
 }
